@@ -67,7 +67,7 @@ This directly satisfies DA2 Question 9 requirements and the DA2 OOP expectations
 ### 2.1 DA2 Question 9 Requirement Mapping
 
 **Q9 Requirement:** Fixed seat layout: 5x10 = 50 seats  
-**Implemented in code:** `constexpr int ROWS = 5; constexpr int COLS = 10;` and `SeatStatus seatMap[ROWS][COLS]`.
+**Implemented in code:** `constexpr int ROWS = 5; constexpr int COLS = 10;` and `std::vector<std::vector<SeatStatus>> seatMap` (5 rows x 10 columns).
 
 **Q9 Requirement:** Display seat map (Available/Booked)  
 **Implemented in code:** `Show::displaySeatMap()` displays each seat as `A` or `B` with labels and legend.
@@ -167,7 +167,7 @@ This directly satisfies DA2 Question 9 requirements and the DA2 OOP expectations
 
 | Member | Type | Role |
 |---|---|---|
-| `seatMap[ROWS][COLS]` | `SeatStatus` array | Stores current status of each seat |
+| `seatMap` | `std::vector<std::vector<SeatStatus>>` | Stores current status of each seat in a fixed 5x10 logical layout |
 | `movieName` | `std::string` | Name of the movie |
 | `showTime` | `std::string` | Scheduled show time |
 
@@ -378,8 +378,9 @@ BK1002|Rahul|B5,B6,B7|450|07:00 PM
 - Parse first line as next ID.
 - Parse each booking line using `std::getline` with `|` delimiter.
 - Parse seat list by comma.
-- Construct booking object via `emplace_back`.
-- Re-lock all parsed seats via `theShow.bookSeat(seat)`.
+- Validate and re-lock all parsed seats first.
+- Construct booking object via `emplace_back` only after successful seat restoration.
+- If a booking record is corrupted or has conflicting seats, skip that record safely and continue loading.
 
 ### 8.6 Why this design is reliable
 
@@ -387,6 +388,7 @@ BK1002|Rahul|B5,B6,B7|450|07:00 PM
 - Rebuilding seat map from booking records ensures consistency.
 - Malformed lines are skipped instead of crashing.
 - Parsing is robust to whitespace due to `trim`.
+- Corrupted/conflicting booking lines are skipped to avoid booking list and seat-map mismatch.
 
 ---
 
@@ -418,7 +420,7 @@ Error-handling style:
 | TC | Input / Scenario | Expected Output | Result |
 |---|---|---|---|
 | 01 | Book 2 seats (`A1`, `A2`) | Success receipt, total Rs.300 | PASS |
-| 02 | Book already booked seat (`A1` again) | Rejected with booked-seat message | PASS |
+| 02 | Book already booked seat (`A1` again) | Rejected during validation with "already booked" message | PASS |
 | 03 | Invalid seat code (`F1`) | Rejected as invalid range | PASS |
 | 04 | Invalid format (`AA1` or `A`) | Rejected | PASS |
 | 05 | Duplicate seat in same booking (`A3`, `A3`) | Rejected | PASS |
@@ -497,3 +499,29 @@ the program easy to understand, maintain, and demonstrate. It satisfies all
 mandatory requirements for DA2 Question 9, including seat locking, booking ID
 generation, search, occupancy reporting, file storage, and robust input checks.
 The final deployment is hosted publicly through GitHub Pages and is submission-ready.
+
+---
+
+## 15. Final PDF Submission Checklist (To Avoid Mark Cuts)
+
+Before final DA2 PDF submission, ensure all required items are included:
+
+- Cover page with:
+  - Project title
+  - Student name and register number
+  - Course and faculty details
+  - GitHub repository link
+  - Live hosted link
+- Problem statement
+- Features implemented (minimum 6; this project includes 10+)
+- Class definitions and class interaction explanation
+- Constructor and encapsulation explanation
+- STL usage explanation
+- File handling design (`bookings.txt` format + load/save logic)
+- Testing table (minimum 6 test cases; this document includes 14)
+- At least 3 screenshots (seat map, successful booking receipt, occupancy/search)
+- AI usage declaration
+- Conclusion
+
+Submission format reminder from instructions:
+- Submit/attach only one documentation PDF as required by faculty instructions.

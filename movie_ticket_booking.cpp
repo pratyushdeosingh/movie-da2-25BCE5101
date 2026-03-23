@@ -75,7 +75,7 @@ int safeStoi(const std::string& str, int defaultVal = 0) {
 // ============================================================================
 class Show {
 private:
-    SeatStatus seatMap[ROWS][COLS];
+    std::vector<std::vector<SeatStatus>> seatMap;
     std::string movieName;
     std::string showTime;
 
@@ -107,11 +107,7 @@ private:
 
     // Helper: initializes all seats to Available
     void initSeats() {
-        for (int i = 0; i < ROWS; ++i) {
-            for (int j = 0; j < COLS; ++j) {
-                seatMap[i][j] = SeatStatus::Available;
-            }
-        }
+        seatMap.assign(ROWS, std::vector<SeatStatus>(COLS, SeatStatus::Available));
     }
 
 public:
@@ -544,8 +540,10 @@ public:
         firstLine = trim(firstLine);
         if (!firstLine.empty()) {
             int parsedID = safeStoi(firstLine, -1);
-            if (parsedID > 0) {
+            if (parsedID >= 1001) {
                 nextBookingID = parsedID;
+            } else {
+                std::cout << "  [WARNING] Invalid booking counter in file. Using default BK1001.\n";
             }
         }
 
@@ -580,14 +578,31 @@ public:
 
             int amount = safeStoi(amountStr, 0);
 
-            // Reconstruct the Booking object and store
+            // Validate and restore all seats atomically so corrupted lines do not
+            // produce booking/seat-map mismatches.
+            bool restoreOk = true;
+            std::vector<std::string> lockedSeats;
+            for (const auto& seat : seats) {
+                if (!theShow.isValidSeatCode(seat) || !theShow.bookSeat(seat)) {
+                    restoreOk = false;
+                    break;
+                }
+                lockedSeats.push_back(seat);
+            }
+
+            if (!restoreOk) {
+                for (const auto& seat : lockedSeats) {
+                    theShow.releaseSeat(seat);
+                }
+                std::cout << "  [WARNING] Skipping corrupted booking record: "
+                          << bookingID << "\n";
+                continue;
+            }
+
+            // Reconstruct the Booking object and store only after successful seat
+            // restoration.
             bookings.emplace_back(bookingID, customerName, seats,
                                   amount, showTimeStr);
-
-            // Restore seat map — bookSeat() validates and prevents double-book
-            for (const auto& seat : seats) {
-                theShow.bookSeat(seat);
-            }
         }
 
         inFile.close();
